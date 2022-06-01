@@ -1,9 +1,10 @@
 from flask import Flask, render_template, request
-from src.infer import Summarizer, initialize, InferConfig
+from src.infer import Summarizer, initialize, InferConfig, Segmentator, SegmentConfig
 
 app = Flask('summary', static_folder='statics', static_url_path='/statics')
 initialize()
 summarizer = Summarizer(InferConfig())
+segmentator = Segmentator(SegmentConfig())
 
 
 @app.route('/', methods=['GET'])
@@ -14,7 +15,8 @@ def get_page():
 @app.route('/', methods=['POST'])
 def get_summary():
     query = request.form['query']
-    summary = summarizer.get_summary([query])
+    segs = segmentator.get_segments(query)
+    summary = summarizer.get_summary(segs)
     return render_template('main.html', query=query, summary=summary)
 
 

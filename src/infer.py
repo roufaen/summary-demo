@@ -3,7 +3,8 @@
 from re import L
 import torch
 import os
-from config import InferConfig
+from config import InferConfig, SegmentConfig
+from textseg.demo import SegBertDemo
 from model_center.model import CPM1Config,CPM1 
 from model_center.tokenizer import CPM1Tokenizer 
 from tqdm import tqdm
@@ -63,6 +64,17 @@ class Summarizer:
         all_summaries = [item["sentence"] for item in all_output]
         return all_summaries
 
+
+class Segmentator:
+    def __init__(self, config: SegmentConfig):
+        self.config = config
+        self.demo = SegBertDemo(config.model_path, config.model_config_path,
+                                batch_size=config.batch_size, device=config.device)
+
+    def get_segments(self, input: str):
+        return self.demo.get_segmentation(input, min_length=self.config.min_length,
+                                          max_length=self.config.max_length,
+                                          prob_threshold=self.config.device)
 
 # def get_tokenizer(args):
 #     tokenizer = CPM1Tokenizer(args.vocab_file)
