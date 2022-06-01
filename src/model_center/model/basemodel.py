@@ -16,7 +16,6 @@
 import os
 from typing import Union
 import torch
-import bmtrain as bmt
 from .config.config import Config
 from ..utils import check_web_and_convert_path
 
@@ -30,12 +29,15 @@ class BaseModel(torch.nn.Module):
             config = cls._CONFIG_TYPE.from_pretrained(pretrained_model_name_or_path, cache_path=cache_path)
         path = check_web_and_convert_path(pretrained_model_name_or_path, 'model', cache_path=cache_path)
         model = cls(config)
-        bmt.load(model, os.path.join(path, 'pytorch_model.pt'), strict=True)
+        model.load_state_dict(
+            torch.load(os.path.join(path, 'pytorch_model.pt')),
+            strict = True
+        )
+        torch.cuda.synchronize()
         return model
 
     @classmethod
     def from_json_file(cls, json_file: Union[str, os.PathLike]):
         config = cls._CONFIG_TYPE.from_json_file(json_file)
         model = cls(config)
-        bmt.init_parameters(model)
         return model

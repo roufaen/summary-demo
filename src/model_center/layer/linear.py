@@ -14,11 +14,10 @@
 # limitations under the License.
 
 import torch
-import bmtrain as bmt
 import math
 import torch.nn.functional as F
 
-class Linear(bmt.DistributedModule):
+class Linear(torch.nn.Module):
     r"""A fully connected layer, which performs :math:`\pmb{y} = \mathbf{W} \pmb{x} + \pmb{b}`
 
     Args:
@@ -42,13 +41,11 @@ class Linear(bmt.DistributedModule):
                 ):
         super().__init__()
         self.dim_in = dim_in
-        self.weight = bmt.DistributedParameter(
-            torch.empty((dim_out, dim_in), dtype=dtype),
-            init_method=bmt.ParameterInitializer(torch.nn.init.normal_, mean=init_mean, std=init_std)
+        self.weight = torch.nn.Parameter(
+            torch.empty((dim_out, dim_in), dtype=dtype)
         )
-        self.bias = bmt.DistributedParameter(
-            torch.empty((dim_out,), dtype=dtype),
-            init_method=bmt.ParameterInitializer(torch.nn.init.zeros_)
+        self.bias = torch.nn.Parameter(
+            torch.empty((dim_out,), dtype=dtype)
         ) if bias else None
         self.length_scale = length_scale
         self.length_scale_before = length_scale_before

@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import torch
-import bmtrain as bmt
 import torch.nn.functional as F
 
 @torch.jit.script
@@ -25,7 +24,7 @@ def rms_layernorm(hidden : torch.Tensor, weight : torch.Tensor, eps :float):
     return hidden * weight
 
 
-class LayerNorm(bmt.DistributedModule):
+class LayerNorm(torch.nn.Module):
     r"""
     `LayerNorm <https://arxiv.org/abs/1607.06450>`_ if bias = True: :math:`y = {x-\text{E}[x]\over \text{Var}[x]+\text{eps}} * w + \text{bias}`
 
@@ -49,9 +48,9 @@ class LayerNorm(bmt.DistributedModule):
 
         self.eps = eps
         self.dim_norm = dim_norm
-        self.weight = bmt.DistributedParameter(
+        self.weight = torch.nn.Parameter(
             torch.ones(dim_norm, dtype=dtype) * init_var)
-        self.bias = bmt.DistributedParameter(
+        self.bias = torch.nn.Parameter(
             torch.zeros(dim_norm, dtype=dtype)) if bias else None
     
     def forward(self, x : torch.Tensor):

@@ -14,11 +14,10 @@
 # limitations under the License.
 
 import torch
-import bmtrain as bmt
 import math
 import torch.nn.functional as F
 
-class Embedding(bmt.DistributedModule):
+class Embedding(torch.nn.Module):
     r"""Embed a sequence of indices through a embedding lookup matrix :math:`\mathbf{W}`.
 
     Args:
@@ -39,9 +38,8 @@ class Embedding(bmt.DistributedModule):
                 ):
         super().__init__()
         self.dim_model = embedding_size
-        self.weight = bmt.DistributedParameter(
+        self.weight = torch.nn.Parameter(
             torch.empty(vocab_size, embedding_size, dtype=dtype),
-            init_method = bmt.ParameterInitializer(torch.nn.init.normal_, mean=init_mean, std=init_std)
         )
         self.length_scale = length_scale
         self.int8 = int8

@@ -53,6 +53,9 @@ def add_inference_args(parser: argparse.ArgumentParser):
                        help='use random sample strategy')
     group.add_argument('--prompt-infer', default=False, action='store_true',
                        help='whether use prompt-tuning model for inference')
+    group.add_argument('--beam-group', type=int, default=1)
+    group.add_argument('--diverse-penalty', type=float, default=0)
+    group.add_argument('--length-penalty', type=float, default=1)
     return parser
 
 

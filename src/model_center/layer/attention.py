@@ -14,14 +14,15 @@
 # limitations under the License.
 
 import math
+import torch.distributed as dist
+import torch.autograd.profiler as profiler
 from typing import Optional
 
 import torch
-import bmtrain as bmt
 from .linear import Linear
 
 
-class Attention(bmt.DistributedModule):
+class Attention(torch.nn.Module):
     r"""attention module consisting procedure of Q, K, V combination and its output projection. 
     For more detail, see `Attention is All you Need <https://arxiv.org/abs/1706.03762>`_.
 
@@ -131,6 +132,7 @@ class Attention(bmt.DistributedModule):
             key_value : torch.Tensor,
             mask : torch.Tensor,
             position_bias : Optional[torch.Tensor] = None,
+            past_key_value = None,
         ):
         """ This model inherits from bmt.DistributedModule. 
 
@@ -153,21 +155,31 @@ class Attention(bmt.DistributedModule):
         h_k = self.project_k(key_value)         # (batch, len_k, num_heads * dim_head)
         h_v = self.project_v(key_value)         # (batch, len_k, num_heads * dim_head)
 
-        h_q = h_q.view(batch_size, len_q, self.num_heads, self.dim_head).permute(0, 2, 1, 3)   # (batch, num_heads, len_q, dim_head)
-        h_k = h_k.view(batch_size, len_k, self.num_heads, self.dim_head).permute(0, 2, 1, 3)   # (batch, num_heads, len_k, dim_head)
-        h_v = h_v.view(batch_size, len_k, self.num_heads, self.dim_head).permute(0, 2, 1, 3)   # (batch, num_heads, len_k, dim_head)
+        h_q = h_q.view(batch_size, len_q, self.num_heads, self.dim_head).permute(0, 2, 1, 3).contiguous()   # (batch, num_heads, len_q, dim_head)
+        h_k = h_k.view(batch_size, len_k, self.num_heads, self.dim_head).permute(0, 2, 1, 3).contiguous()   # (batch, num_heads, len_k, dim_head)
+        h_v = h_v.view(batch_size, len_k, self.num_heads, self.dim_head).permute(0, 2, 1, 3).contiguous()   # (batch, num_heads, len_k, dim_head)
 
-        h_q = h_q.contiguous().view(batch_size * self.num_heads, len_q, self.dim_head)      # (batch * num_heads, len_q, dim_head)
-        h_k = h_k.contiguous().view(batch_size * self.num_heads, len_k, self.dim_head)      # (batch * num_heads, len_k, dim_head)
-        h_v = h_v.contiguous().view(batch_size * self.num_heads, len_k, self.dim_head)      # (batch * num_heads, len_k, dim_head)
+        if past_key_value:
+            past_key, past_value = past_key_value
+            h_k = torch.cat((past_key, h_k), dim=-2)
+            h_v = torch.cat((past_value, h_v), dim=-2)
+            len_k = h_k.size(-2)
+        
+        present_key_value = [h_k, h_v]
+
+
+        h_q = h_q.view(batch_size * self.num_heads, len_q, self.dim_head)      # (batch * num_heads, len_q, dim_head)
+        h_k = h_k.view(batch_size * self.num_heads, len_k, self.dim_head)      # (batch * num_heads, len_k, dim_head)
+        h_v = h_v.view(batch_size * self.num_heads, len_k, self.dim_head)      # (batch * num_heads, len_k, dim_head)
 
         if self.pos_bias_type == "rotary":
             h_q, h_k = position_bias(h_q, h_k)
 
         # (batch * num_heads, len_q, dim_head) @ (batch * num_heads, len_k, dim_head)T 
         # => (batch * num_heads, len_q, len_k)
-        
         score = torch.matmul( h_q, h_k.transpose(1, 2))
+
+
         if self.attn_scale:
             score = score / math.sqrt(self.dim_head)
 
@@ -179,11 +191,13 @@ class Attention(bmt.DistributedModule):
                 # (batch, num_heads, len_q, len_k) + (1, num_heads, len_q, len_k) 
                 score = score + position_bias
         
-        score = torch.masked_fill(
-            score,
-            mask.view(batch_size, 1, len_q, len_k)==False,
-            torch.scalar_tensor(self.mask_value, device=score.device, dtype=score.dtype)
-        )   # (batch, num_heads, len_q, len_k)
+        # score = torch.masked_fill(
+        #     score,
+        #     mask.view(batch_size, 1, len_q, len_k)==False,
+        #     torch.scalar_tensor(self.mask_value, device=score.device, dtype=score.dtype)
+        # )   # (batch, num_heads, len_q, len_k)
+
+        score += torch.where(mask.view(batch_size, 1, len_q, len_k)==False, float("-inf"), 0.0)
 
         score = self.softmax(score)
 
@@ -193,11 +207,14 @@ class Attention(bmt.DistributedModule):
             mask.view(batch_size, 1, len_q, len_k)==False,
             torch.scalar_tensor(0, device=score.device, dtype=score.dtype)
         ).view(batch_size * self.num_heads, len_q, len_k) # (batch * num_heads, len_q, len_k)
+        
+        # score = (score * (mask.view(batch_size, 1, len_q, len_k) == True)).view(batch_size * self.num_heads, len_q, len_k)
+
 
         if self.attention_dropout is not None:
             score = self.attention_dropout(score)
 
-         # (batch * num_heads, len_q, len_k) @ (batch * num_heads, len_k, dim_head) = (batch * num_heads, len_q, dim_head)
+        # (batch * num_heads, len_q, len_k) @ (batch * num_heads, len_k, dim_head) = (batch * num_heads, len_q, dim_head)
         score = torch.matmul(score, h_v)
 
         score = score.view(batch_size, self.num_heads, len_q, self.dim_head).permute(0, 2, 1, 3) # (batch, len_q, num_heads, dim_head)
@@ -206,4 +223,4 @@ class Attention(bmt.DistributedModule):
         # (1#batch, dim_model, num_heads * dim_head) @ (batch, num_heads * dim_head, len_q) = (batch, dim_model, len_q)
         score = self.attention_out(score)
 
-        return score
+        return score, present_key_value
