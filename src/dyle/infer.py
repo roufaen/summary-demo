@@ -35,7 +35,7 @@ class DyleInfer:
         
         outputs = []
         with torch.no_grad():
-            for iter_num, [id, text_sents,retriever_input_ids, retriever_attention_masks, cls_ids, context_input_ids] in enumerate(dataloader):
+            for iter_num, [id, text_sents, retriever_input_ids, retriever_attention_masks, cls_ids, context_input_ids] in enumerate(dataloader):
                 retriever_input_ids, retriever_attention_masks, cls_ids, context_input_ids, = \
                     retriever_input_ids.cuda().squeeze(0), retriever_attention_masks.cuda().squeeze(0), cls_ids.cuda().squeeze(0), context_input_ids.cuda().squeeze(0)
 
@@ -60,7 +60,7 @@ class DyleInfer:
 
                 # output
                 initial_topk_indices = sorted(initial_topk_indices)
-                text_lens = np.array([0] + [len(text) for text in text_sents])
+                text_lens = np.array([0] + [len(text) for text in text_sents[0]])
                 cum_text_lens = np.cumsum(text_lens)
                 highlight_spans = []
                 for idx in initial_topk_indices:
