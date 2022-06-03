@@ -1,8 +1,9 @@
 from flask import Flask, render_template, request
-from src.infer import Summarizer
+from src.infer import initialize, Segmentator, SegmentConfig, DyleInfer
 
 app = Flask('summary', static_folder='statics', static_url_path='/statics')
-summarizer = Summarizer()
+summarizer = None
+segmentator = None
 
 
 @app.route('/', methods=['GET'])
@@ -13,9 +14,15 @@ def get_page():
 @app.route('/', methods=['POST'])
 def get_summary():
     query = request.form['query']
-    summary = summarizer.get_summary(query)
-    return render_template('main.html', query=query, summary=summary)
+    segs = segmentator.get_segments(query)
+    summary = summarizer.get_summary(segs)
+    # return render_template('main.html', query=query, summary=summary
+    print(summary)
+    return str(summary)
 
 
 if __name__ == '__main__':
+    initialize()
+    summarizer = DyleInfer()
+    segmentator = Segmentator(SegmentConfig())
     app.run('0.0.0.0', '8080')

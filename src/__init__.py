@@ -1,1 +1,1 @@
-from .infer import Summarizer
+from .infer import *

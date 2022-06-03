@@ -14,12 +14,11 @@
 # limitations under the License.
 
 import torch
-import bmtrain as bmt
 
 from .linear import Linear
 
 
-class DenseGatedACT(bmt.DistributedModule):
+class DenseGatedACT(torch.nn.Module):
 
     def __init__(self,
                  dim_in : int,
@@ -83,7 +82,7 @@ class DenseGatedACT(bmt.DistributedModule):
         return x
 
 
-class DenseACT(bmt.DistributedModule):
+class DenseACT(torch.nn.Module):
 
     def __init__(self,
                  dim_in : int,
@@ -132,7 +131,7 @@ class DenseACT(bmt.DistributedModule):
         
         return x
 
-class FeedForward(bmt.DistributedModule):
+class FeedForward(torch.nn.Module):
     r"""FeedForward module
 
     Args:
