@@ -204,9 +204,10 @@ class DyleDemoDataset(torch.utils.data.Dataset):
         return len(self.data)
     
     def __getitem__(self, index):
-        data_i = self.data[index]
-        return data_i['id'], data_i["text_sents"], data_i["para_pos"], data_i["retriever_input_ids"], data_i["retriever_attention_masks"], \
-                data_i["cls_ids"], data_i["context_input_ids"]
+        return self.data[index]
+        # data_i = self.data[index]
+        # return data_i['id'], data_i["text_sents"], data_i["para_pos"], data_i["retriever_input_ids"], data_i["retriever_attention_masks"], \
+        #         data_i["cls_ids"], data_i["context_input_ids"]
 
 def dyle_collate_fn(data: List[Dict]):
     keys = data[0].keys()

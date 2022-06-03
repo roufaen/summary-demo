@@ -146,13 +146,7 @@ class CPM1(BaseModel):
         hidden_states = self.input_embedding(input)
         hidden_states, present_key_values = self.encoder(hidden_states, attention_mask, position_bias, past_key_values)
 
-
-        if self.cls_head:
-            logits = self.output_projection(hidden_states)
-        elif not self.tied:
-            logits = self.output_projection(hidden_states)
-        else:
-            logits = self.input_embedding.projection(hidden_states)
+        logits = self.input_embedding.projection(hidden_states)
 
 
-        return logits, present_key_values
+        return logits, hidden_states, present_key_values

@@ -5,8 +5,8 @@ import torch
 import spacy
 from .config import InferConfig, SegmentConfig
 from .textseg.demo import SegBertDemo
-from model_center.model import CPM1Config,CPM1 
-from model_center.tokenizer import CPM1Tokenizer 
+# from model_center.model import CPM1Config,CPM1 
+# from model_center.tokenizer import CPM1Tokenizer 
 import torch.distributed as dist
 
 from model_center import get_args
@@ -16,53 +16,53 @@ from .infer_dataset import BatchInferDataset, DemoSumInferDataset
 from .dyle.infer import DyleInfer
 
 
-class Summarizer:
-    def __init__(self, config: InferConfig):
-        self.tokenizer = CPM1Tokenizer(config.model_path + "/vocab.txt")
-        self.model_config = CPM1Config.from_json_file(config.model_path + "/config.json")
-        self.model_config.vocab_size = self.tokenizer.vocab_size
-        print ("vocab size:%d"%(self.model_config.vocab_size))
-        self.model = CPM1(self.model_config).cuda()
-        self.model.load_state_dict(
-            torch.load(config.load_path),
-            strict=True
-        )
-        self.config = config
-        torch.cuda.synchronize()
-    
-    def summarize(self, str_list: list):
-        dataset = DemoSumInferDataset(str_list, self.tokenizer, self.config.max_length)
-        step = len(str_list)
-        batch_num = (step + self.config.batch_size - 1) // self.config.batch_size
-        batch_dataset = BatchInferDataset(dataset, self.tokenizer, 
-                                          self.config.span_length, 
-                                          self.config.batch_size, batch_num)
-        min_len = 2 # 确保生成内容不为空
-
-        def work(input_dict):
-            result = generate(self.model, self.tokenizer, input_dict, beam=self.config.beam_size,
-                            temperature = self.config.temperature, length_penalty=self.config.length_penalty, 
-                            top_k = self.config.top_k, top_p = self.config.top_p,
-                            no_repeat_ngram_size = self.config.no_repeat_ngram_size, repetition_penalty = self.config.repetition_penalty, 
-                            random_sample=self.config.random_sample, min_len=min_len)
-            output = []
-            for idx, sent in enumerate(result):
-                output.append({
-                    "sentence": sent,
-                    "id": input_dict['ids'][idx]
-                })
-            return output
-        
-        all_output = []
-        for input_dict in batch_dataset:
-            if input_dict["valid"]:
-                output = work(input_dict)
-                all_output.extend(output)
-        
-        all_output = sorted(all_output, key=lambda x: x["id"])
-        
-        all_summaries = [item["sentence"] for item in all_output]
-        return all_summaries
+# class Summarizer:
+#     def __init__(self, config: InferConfig):
+#         self.tokenizer = CPM1Tokenizer(config.model_path + "/vocab.txt")
+#         self.model_config = CPM1Config.from_json_file(config.model_path + "/config.json")
+#         self.model_config.vocab_size = self.tokenizer.vocab_size
+#         print ("vocab size:%d"%(self.model_config.vocab_size))
+#         self.model = CPM1(self.model_config).cuda()
+#         self.model.load_state_dict(
+#             torch.load(config.load_path),
+#             strict=True
+#         )
+#         self.config = config
+#         torch.cuda.synchronize()
+#     
+#     def summarize(self, str_list: list):
+#         dataset = DemoSumInferDataset(str_list, self.tokenizer, self.config.max_length)
+#         step = len(str_list)
+#         batch_num = (step + self.config.batch_size - 1) // self.config.batch_size
+#         batch_dataset = BatchInferDataset(dataset, self.tokenizer, 
+#                                           self.config.span_length, 
+#                                           self.config.batch_size, batch_num)
+#         min_len = 2 # 确保生成内容不为空
+# 
+#         def work(input_dict):
+#             result = generate(self.model, self.tokenizer, input_dict, beam=self.config.beam_size,
+#                             temperature = self.config.temperature, length_penalty=self.config.length_penalty, 
+#                             top_k = self.config.top_k, top_p = self.config.top_p,
+#                             no_repeat_ngram_size = self.config.no_repeat_ngram_size, repetition_penalty = self.config.repetition_penalty, 
+#                             random_sample=self.config.random_sample, min_len=min_len)
+#             output = []
+#             for idx, sent in enumerate(result):
+#                 output.append({
+#                     "sentence": sent,
+#                     "id": input_dict['ids'][idx]
+#                 })
+#             return output
+#         
+#         all_output = []
+#         for input_dict in batch_dataset:
+#             if input_dict["valid"]:
+#                 output = work(input_dict)
+#                 all_output.extend(output)
+#         
+#         all_output = sorted(all_output, key=lambda x: x["id"])
+#         
+#         all_summaries = [item["sentence"] for item in all_output]
+#         return all_summaries
 
 
 class Segmentator:
@@ -94,7 +94,7 @@ class Segmentator:
         text_sents, para_pos = self.cut_sent(input)
         split_pos = self.demo.get_segmentation(text_sents, min_length=self.config.min_length,
                                           max_length=self.config.max_length,
-                                          prob_threshold=self.config.device)
+                                          prob_threshold=self.config.prob_threshold)
         for pos in para_pos:
             text_sents[pos] = text_sents[pos] + "\n"
         output = []

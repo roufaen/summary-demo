@@ -16,8 +16,9 @@ def get_summary():
     query = request.form['query']
     segs = segmentator.get_segments(query)
     summary = summarizer.get_summary(segs)
-    # return render_template('main.html', query=query, summary=summary)
-    return summary
+    # return render_template('main.html', query=query, summary=summary
+    print(summary)
+    return str(summary)
 
 
 if __name__ == '__main__':
