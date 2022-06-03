@@ -37,10 +37,10 @@ class Config:
     infer_random_sample = False
 
     # directory
-    base_dir = '/data/private/luofuwen/'
+    base_dir = '/data2/private/huangshuhong/'
     input_cache_dir = base_dir + 'DYLE_repro/input_cache/'
     output_dir = base_dir + 'DYLE_repro/outputs/'
-    save_model_dir = base_dir + 'DYLE_repro/saved_models/'
-    model_path = base_dir + 'models/cpm1-small/'
+    save_model_dir = base_dir + "model/checkpoints/"
+    model_path = base_dir + 'model/cpm1-small/'
     data_path = base_dir + 'datasets/CNewSum/'
-    name = "best_1"
+    name = ""

@@ -17,9 +17,9 @@ class InferConfig:
 
 
 class SegmentConfig:
-    model_path = "/data/private/zhaoxinhao/textseg/experiments/20220529_1_multilevel_crossseg/results/huggingface-finetune-cpm1-ckpt-1-0.pt"
-    model_config_path = "some path"
-    device = "cuda:0"
+    model_path = "/home/huangshuhong/huangshuhong/model/checkpoints/huggingface-text-segmentation-1.pt"
+    model_config_path = "bert-base-chinese"
+    device = "cuda"
     batch_size = 16
     min_length = 200
     max_length = 600

@@ -24,8 +24,8 @@ class DyleInfer:
         self.load_model(Config.name)
 
     def load_model(self, name):
-        bmt.load(self.retriever_model, Config.save_model_dir + name + '_retriever_model.pt')
-        bmt.load(self.generator_model, Config.save_model_dir + name + '_generator_model.pt')
+        bmt.load(self.retriever_model, Config.save_model_dir + name + 'retriever_model.pt')
+        bmt.load(self.generator_model, Config.save_model_dir + name + 'generator_model.pt')
         
     def get_summary(self, str_list: list):
         dataset = DyleDemoDataset(str_list, self.retriever_tokenizer, self.generator_tokenizer)
