@@ -1,6 +1,9 @@
+from pyparsing import line
 import torch, json, os
 import bmtrain as bmt
 import re
+import spacy
+from typing import Tuple, List, Dict
 
 from config import Config
 
@@ -110,16 +113,18 @@ class DyleDemoDataset(torch.utils.data.Dataset):
         self.data = list()
         self.retriever_tokenizer = retriever_tokenizer
         self.generator_tokenizer = generator_tokenizer
+        self.nlp = spacy.load("zh_core_web_lg")
         
         for i, text in enumerate(str_list):
             text = text.replace(' ', '')
-            text_sents = self.cut_sent(text)
+            text_sents, para_pos = self.cut_sent(text)
             retriever_input_ids, retriever_attention_masks, cls_ids = self.tokenize_retriever(text_sents)
             context_input_ids = self.tokenize_generator(text_sents)
             
             self.data.append({
                 'id': i,
                 "text_sents": text_sents,
+                'para_pos': para_pos,
                 'retriever_input_ids': torch.LongTensor(retriever_input_ids),
                 'retriever_attention_masks': torch.LongTensor(retriever_attention_masks),
                 'cls_ids': torch.LongTensor(cls_ids),
@@ -177,20 +182,41 @@ class DyleDemoDataset(torch.utils.data.Dataset):
 
         return context_input_ids
 
-    @staticmethod
-    def cut_sent(para):
-        para = re.sub('([。！？\?])([^”’])', r"\1\n\2", para)
-        para = re.sub('(\.{6})([^”’])', r"\1\n\2", para)
-        para = re.sub('(\…{2})([^”’])', r"\1\n\2", para)
-        para = re.sub('([。！？\?][”’])([^，。！？\?])', r'\1\n\2', para)
-        para = para.rstrip()
-        return para.split("\n")
+    def cut_sent(self, text: str):
+        # para = re.sub('([。！？\?])([^”’])', r"\1\n\2", para)
+        # para = re.sub('(\.{6})([^”’])', r"\1\n\2", para)
+        # para = re.sub('(\…{2})([^”’])', r"\1\n\2", para)
+        # para = re.sub('([。！？\?][”’])([^，。！？\?])', r'\1\n\2', para)
+        # para = para.rstrip()
+        # return para.split("\n")
+        paras = [line.strip() for line in text.split('\n')]
+        paras = [line for line in paras if len(line) > 0]
+        para_pos = []
+        sentences = []
+        for para in paras:
+            doc = self.nlp(para)
+            sentences.extend([sent.text for sent in doc.sents])
+            para_pos.append(len(sentences) - 1)
+
+        return sentences, para_pos
     
     def __len__(self):
         return len(self.data)
     
     def __getitem__(self, index):
         data_i = self.data[index]
-        return data_i['id'], data_i["text_sents"], data_i["retriever_input_ids"], data_i["retriever_attention_masks"], \
+        return data_i['id'], data_i["text_sents"], data_i["para_pos"], data_i["retriever_input_ids"], data_i["retriever_attention_masks"], \
                 data_i["cls_ids"], data_i["context_input_ids"]
 
+def dyle_collate_fn(data: List[Dict]):
+    keys = data[0].keys()
+    output = dict()
+    for key in keys:
+        output[key] = [item[key] for item in data]
+    not_tenser = ["id", "text_sents", "para_pos"]
+    for key in output:
+        if not (key in not_tenser):
+            output[key] = torch.stack(output[key])
+    return output['id'], output["text_sents"], output["para_pos"], output["retriever_input_ids"], \
+            output["retriever_attention_masks"],  output["cls_ids"], output["context_input_ids"]
+    

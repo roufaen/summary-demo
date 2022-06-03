@@ -1,9 +1,10 @@
 import torch
 import bmtrain as bmt
 import numpy as np
+import html
 from transformers import BertTokenizer
 
-from cnewsum_dataset import DyleDemoDataset
+from cnewsum_dataset import DyleDemoDataset, dyle_collate_fn
 from retriever_model import RetrieverModel
 from generator_model import GeneratorModel
 from model_center.dataset import DistributedDataLoader
@@ -26,16 +27,16 @@ class DyleInfer:
         bmt.load(self.retriever_model, Config.save_model_dir + name + '_retriever_model.pt')
         bmt.load(self.generator_model, Config.save_model_dir + name + '_generator_model.pt')
         
-    def summarize(self, str_list: list):
+    def get_summary(self, str_list: list):
         dataset = DyleDemoDataset(str_list, self.retriever_tokenizer, self.generator_tokenizer)
-        dataloader = DistributedDataLoader(dataset, batch_size=1, shuffle=False)
+        dataloader = DistributedDataLoader(dataset, batch_size=1, shuffle=False, collate_fn=dyle_collate_fn)
         
         self.retriever_model.eval()
         self.generator_model.eval()
         
         outputs = []
         with torch.no_grad():
-            for iter_num, [id, text_sents, retriever_input_ids, retriever_attention_masks, cls_ids, context_input_ids] in enumerate(dataloader):
+            for iter_num, (id, text_sents, para_pos, retriever_input_ids, retriever_attention_masks, cls_ids, context_input_ids) in enumerate(dataloader):
                 retriever_input_ids, retriever_attention_masks, cls_ids, context_input_ids, = \
                     retriever_input_ids.cuda().squeeze(0), retriever_attention_masks.cuda().squeeze(0), cls_ids.cuda().squeeze(0), context_input_ids.cuda().squeeze(0)
 
@@ -59,6 +60,13 @@ class DyleInfer:
                     repetition_penalty=Config.infer_repetition_penalty, random_sample=Config.infer_random_sample, min_len=2)
 
                 # output
+                for j in range(len(text_sents)):
+                    for pos in para_pos[j]:
+                        text_sents[j][pos] = text_sents[j][pos] + "\n"
+                    for i in range(len(text_sents[j])):
+                        text_sents[j][i] = html.escape(text_sents[j][i])
+                
+                # only works for batch size = 1
                 initial_topk_indices = sorted(initial_topk_indices)
                 text_lens = np.array([0] + [len(text) for text in text_sents[0]])
                 cum_text_lens = np.cumsum(text_lens)

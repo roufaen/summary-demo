@@ -2,18 +2,18 @@
 
 from re import L
 import torch
-import os
+import spacy
 from config import InferConfig, SegmentConfig
 from textseg.demo import SegBertDemo
 from model_center.model import CPM1Config,CPM1 
 from model_center.tokenizer import CPM1Tokenizer 
-from tqdm import tqdm
 import torch.distributed as dist
 
 from model_center import get_args
 from generation import generate
 
 from infer_dataset import BatchInferDataset, DemoSumInferDataset
+from dyle.infer import DyleInfer
 
 
 class Summarizer:
@@ -68,13 +68,41 @@ class Summarizer:
 class Segmentator:
     def __init__(self, config: SegmentConfig):
         self.config = config
+        self.nlp = spacy.load("zh_core_web_lg")
         self.demo = SegBertDemo(config.model_path, config.model_config_path,
                                 batch_size=config.batch_size, device=config.device)
 
+    def cut_sent(self, text: str):
+        paras = [line.strip() for line in text.split('\n')]
+        paras = [line for line in paras if len(line) > 0]
+        para_pos = []
+        sentences = []
+        for para in paras:
+            doc = self.nlp(para)
+            sentences.extend([sent.text for sent in doc.sents])
+            para_pos.append(len(sentences) - 1)
+
+        return sentences, para_pos
+
     def get_segments(self, input: str):
-        return self.demo.get_segmentation(input, min_length=self.config.min_length,
+        """
+        1. 先把文章按照\n分段，记录其位置，然后用spacy分句得到句子列表
+        2. 将该列表用text segmentation处理后得到分段信息
+        3. 恢复句子中的\n
+        4. 根据分段信息将句子重组为段落，返回的是一个没有丢失换行信息的段落的列表
+        """
+        text_sents, para_pos = self.cut_sent(input)
+        split_pos = self.demo.get_segmentation(text_sents, min_length=self.config.min_length,
                                           max_length=self.config.max_length,
                                           prob_threshold=self.config.device)
+        for pos in para_pos:
+            text_sents[pos] = text_sents[pos] + "\n"
+        output = []
+        split_pos = [0] + split_pos + [len(text_sents)]
+        for i in range(len(split_pos) - 1):
+            output.append("".join(text_sents[split_pos[i]: split_pos[i + 1]]))
+        
+        return output
 
 # def get_tokenizer(args):
 #     tokenizer = CPM1Tokenizer(args.vocab_file)

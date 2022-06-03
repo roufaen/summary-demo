@@ -14,7 +14,7 @@ class SegBertDemo:
     """
     
     def __init__(self, model_path, model_config_path, batch_size=256, max_context_length=254, device='cpu'):
-        self.nlp = spacy.load("zh_core_web_lg")
+        # self.nlp = spacy.load("zh_core_web_lg")
         
         self.model = CrossSegBert(AutoModel.from_config(BertConfig.from_pretrained(model_config_path))).to(device)
         self.model.load_state_dict(torch.load(model_path, map_location=device), strict=False)
@@ -24,10 +24,10 @@ class SegBertDemo:
         self.max_context_length=254
         self.device = device
         
-    def get_segmentation(self, text: str, min_length=200, max_length=600, prob_threshold=0.5) -> List[str]:
+    def get_segmentation(self, sentences: List[str], min_length=200, max_length=600, prob_threshold=0.5) -> List[int]:
         """Get text segmentation result by length
         """
-        sentences, text_id = self._input_processing(text)
+        sentences, text_id = self._input_processing(sentences)
         prob = self.get_segmentation_prob(text_id)
         sent_length_list = [len(sentence) for sentence in sentences]
         sorted_prob_list = sorted(list(zip(prob, list(range(1, len(prob) + 1)))), reverse=True)
@@ -50,9 +50,9 @@ class SegBertDemo:
             else:
                 break
         split_pos = end_list[:-1]
-        return self._post_processing(sentences, split_pos)
+        return split_pos
     
-    def get_segmentation_by_prob(self, text: str, prob_threshold=0.5) -> List[str]:
+    def get_segmentation_by_prob(self, text: str, prob_threshold=0.5) -> List[int]:
         """Get text segmentation result by prob threshold
         
         Args:
@@ -64,7 +64,7 @@ class SegBertDemo:
         sentences, text_id = self._input_processing(text)
         prob = self.get_segmentation_prob(text_id)
         split_pos = np.where(np.array(prob) >= prob_threshold)[0] + 1
-        return self._post_processing(sentences, split_pos)
+        return split_pos
         
     def get_segmentation_prob(self, text_id: List[List[int]]) -> List[float]:
         context_list = [self._get_context(text_id, mid_sent_idx) for mid_sent_idx in range(1, len(text_id))]
@@ -75,9 +75,7 @@ class SegBertDemo:
             prob.extend(self._call_model(input_context))
         return prob
     
-    def _input_processing(self, text: str) -> Tuple[List[str], List[List[int]]]:
-        doc = self.nlp(text)
-        sentences = [sent.text for sent in doc.sents]
+    def _input_processing(self, sentences: List[str]) -> Tuple[List[str], List[List[int]]]:
         text_id = [self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(sent)) for sent in sentences]
         return sentences, text_id
     

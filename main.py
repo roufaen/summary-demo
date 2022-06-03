@@ -1,9 +1,9 @@
 from flask import Flask, render_template, request
-from src.infer import Summarizer, initialize, InferConfig, Segmentator, SegmentConfig
+from src.infer import initialize, Segmentator, SegmentConfig, DyleInfer
 
 app = Flask('summary', static_folder='statics', static_url_path='/statics')
 initialize()
-summarizer = Summarizer(InferConfig())
+summarizer = DyleInfer()
 segmentator = Segmentator(SegmentConfig())
 
 
