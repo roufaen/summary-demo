@@ -3,17 +3,17 @@
 from re import L
 import torch
 import spacy
-from config import InferConfig, SegmentConfig
-from textseg.demo import SegBertDemo
+from .config import InferConfig, SegmentConfig
+from .textseg.demo import SegBertDemo
 from model_center.model import CPM1Config,CPM1 
 from model_center.tokenizer import CPM1Tokenizer 
 import torch.distributed as dist
 
 from model_center import get_args
-from generation import generate
+from .generation import generate
 
-from infer_dataset import BatchInferDataset, DemoSumInferDataset
-from dyle.infer import DyleInfer
+from .infer_dataset import BatchInferDataset, DemoSumInferDataset
+from .dyle.infer import DyleInfer
 
 
 class Summarizer:
@@ -131,6 +131,7 @@ def initialize():
     # get arguments
     args = get_args()
     # init bmp 
+    # print(args.local_rank)
     torch.cuda.set_device(args.local_rank)
     dist.init_process_group("nccl")
 

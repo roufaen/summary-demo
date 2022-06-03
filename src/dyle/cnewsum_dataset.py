@@ -5,7 +5,7 @@ import re
 import spacy
 from typing import Tuple, List, Dict
 
-from config import Config
+from .config import Config
 
 
 class CNewSumDataset(torch.utils.data.Dataset):

@@ -4,18 +4,19 @@ import numpy as np
 import html
 from transformers import BertTokenizer
 
-from cnewsum_dataset import DyleDemoDataset, dyle_collate_fn
-from retriever_model import RetrieverModel
-from generator_model import GeneratorModel
+from .cnewsum_dataset import DyleDemoDataset, dyle_collate_fn
+from .retriever_model import RetrieverModel
+from .generator_model import GeneratorModel
 from model_center.dataset import DistributedDataLoader
 from model_center.tokenizer import CPM1Tokenizer
 
-from generation import generate
-from config import Config
+from .generation import generate
+from .config import Config
 
 
 class DyleInfer:
     def __init__(self):
+        bmt.init_distributed(loss_scale_factor=2, loss_scale_steps=1024)
         self.retriever_tokenizer = BertTokenizer.from_pretrained('hfl/chinese-roberta-wwm-ext')
         self.generator_tokenizer = CPM1Tokenizer.from_pretrained(Config.model_path)
         self.retriever_model = RetrieverModel().cuda()

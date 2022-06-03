@@ -51,7 +51,7 @@ OPTS+=" --batch-size 16"
 
 # CMD="python3 -m torch.distributed.launch ${DISTRIBUTED_ARGS} ${BASE_PATH}/code_infer/infer.py ${OPTS}"
 # echo ${CMD}
-python3 -m torch.distributed.run ${DISTRIBUTED_ARGS} main.py ${OPTS}
+python3 -m torch.distributed.launch ${DISTRIBUTED_ARGS} main.py ${OPTS}
 # ${CMD} 2>&1 | tee ${BASE_PATH}/infer_results/${INPUT_FILE}/infer-${EPOCH}-${CKPT_STEPS}.log
 
 # cat ${OUTPUT_FILE}.* > ${OUTPUT_FILE}
