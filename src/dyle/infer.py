@@ -63,17 +63,20 @@ class DyleInfer:
                 # output
                 for j in range(len(text_sents)):
                     for pos in para_pos[j]:
-                        text_sents[j][pos] = text_sents[j][pos] + "\n"
-                    for i in range(len(text_sents[j])):
-                        text_sents[j][i] = html.escape(text_sents[j][i])
+                        text_sents[j][pos] = text_sents[j][pos] + "<br>"
+                    # for i in range(len(text_sents[j])):
+                    #     text_sents[j][i] = html.escape(text_sents[j][i], quote=True)
                 
                 # only works for batch size = 1
                 initial_topk_indices = sorted(initial_topk_indices)
                 text_lens = np.array([0] + [len(text) for text in text_sents[0]])
+                text_sents[0] = [html.escape(sent, quote=True) for sent in text_sents[0]]
+                for text in text_sents[0]:
+                    print(text, " ", len(text))
                 cum_text_lens = np.cumsum(text_lens)
                 highlight_spans = []
                 for idx in initial_topk_indices:
-                    highlight_spans.append({"start": cum_text_lens[idx], "end": cum_text_lens[idx + 1]})
+                    highlight_spans.append({"start": int(cum_text_lens[idx]), "end": int(cum_text_lens[idx + 1])})
                 outputs.append({
                     "paragraph": "".join(text_sents[0]),
                     "summary": output[0],

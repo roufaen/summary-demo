@@ -21,6 +21,6 @@ class SegmentConfig:
     model_config_path = "bert-base-chinese"
     device = "cuda"
     batch_size = 16
-    min_length = 200
-    max_length = 600
+    min_length = 800
+    max_length = 1200
     prob_threshold = 0.5

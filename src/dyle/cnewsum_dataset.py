@@ -194,8 +194,13 @@ class DyleDemoDataset(torch.utils.data.Dataset):
         para_pos = []
         sentences = []
         for para in paras:
-            doc = self.nlp(para)
-            sentences.extend([sent.text for sent in doc.sents])
+            para = re.sub('([。！？\?])([^”’])', r"\1\n\2", para)
+            para = re.sub('(\.{6})([^”’])', r"\1\n\2", para)
+            para = re.sub('(\…{2})([^”’])', r"\1\n\2", para)
+            para = re.sub('([。！？\?][”’])([^，。！？\?])', r'\1\n\2', para)
+            para = para.rstrip()
+
+            sentences.extend(para.split("\n"))
             para_pos.append(len(sentences) - 1)
 
         return sentences, para_pos

@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request
 from src.infer import initialize, Segmentator, SegmentConfig, DyleInfer
+import json
 
 app = Flask('summary', static_folder='statics', static_url_path='/statics')
 summarizer = None
@@ -17,8 +18,8 @@ def get_summary():
     segs = segmentator.get_segments(query)
     summary = summarizer.get_summary(segs)
     # return render_template('main.html', query=query, summary=summary
-    print(summary)
-    return str(summary)
+    # print(summary)
+    return json.dumps(summary, ensure_ascii=False, indent=1)
 
 
 if __name__ == '__main__':
